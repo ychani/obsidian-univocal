@@ -3,8 +3,8 @@
  * Registered at load but inert unless the `developer` setting is on.
  *
  * - `cmd=read[&prefer=selection|document]` reads the active note.
- * - `cmd=pause` pauses / resumes.
- * - `cmd=stop` stops.
+ * - `cmd=pause` pauses / resumes (dev-only, for QA: users pause in Univocal's pill or with ⌥⇧R).
+ * - `cmd=stop` stops (dev-only, for QA: users stop in Univocal's pill).
  * - `cmd=status[&tag=…]` writes `univocal-dev-status.json` into the connect
  *   dir: state, sessionId, last word/sentence range, painted-range counts and
  *   mode (for QA assertions). Never contains note text.
@@ -47,7 +47,9 @@ export interface DevProtocolDeps {
 	/** Effective connect dir (setting → env → default). */
 	connectDir(): string;
 	read(prefer?: StartPreference): void;
+	/** Dev-only: the plugin has no user-facing pause/resume. */
 	pauseResume(): void;
+	/** Dev-only: the plugin has no user-facing stop. */
 	stop(): void;
 	status(): DevStatus;
 	log?(message: string): void;

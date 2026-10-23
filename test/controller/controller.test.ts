@@ -20,6 +20,49 @@ describe("read (command)", () => {
 		expect(r.states.slice(0, 3)).toEqual(["connecting", "loading", "playing"]);
 	});
 
+	it("readAloud starts a reading when idle", async () => {
+		const r = rig();
+		r.controller.readAloud();
+		await flush();
+		expect(r.client.readCalls).toHaveLength(1);
+		expect(r.controller.state.kind).toBe("loading");
+	});
+
+	it.each(["playing", "paused", "loading"] as const)("readAloud while %s is a no-op (no restart, no toggle)", async (state) => {
+		const r = rig();
+		await r.controller.read();
+		const s = r.client.lastSession;
+		s.emit("state", { state });
+		r.controller.readAloud();
+		await flush();
+		expect(r.client.readCalls).toHaveLength(1);
+		expect(s.stop).not.toHaveBeenCalled();
+		expect(s.pause).not.toHaveBeenCalled();
+		expect(s.resume).not.toHaveBeenCalled();
+		expect(r.controller.state.kind).toBe(state);
+		expect(r.controller.sessionId).toBe(s.id);
+	});
+
+	it("readAloud while connecting is a no-op", async () => {
+		const r = rig();
+		let release!: () => void;
+		r.client.connectImpl = () =>
+			new Promise((resolve) => {
+				release = () => {
+					r.client.connected();
+					resolve(SERVER);
+				};
+			});
+		const p = r.controller.read();
+		expect(r.controller.state.kind).toBe("connecting");
+		r.controller.readAloud();
+		release();
+		await p;
+		await flush();
+		expect(r.client.connect).toHaveBeenCalledTimes(1);
+		expect(r.client.readCalls).toHaveLength(1);
+	});
+
 	it("starts at the selection when there is one", async () => {
 		const r = rig();
 		r.note.firstVisible = 10;
@@ -124,17 +167,17 @@ describe("connect failures", () => {
 });
 
 describe("session lifecycle", () => {
-	it("pause/resume and stop", async () => {
+	it("follows pause/resume from Univocal's pill; internal stop clears", async () => {
 		const r = rig();
 		await r.controller.read();
 		const s = r.client.lastSession;
 		s.emit("state", { state: "playing" });
-		await r.controller.pauseResume();
-		expect(s.pause).toHaveBeenCalled();
+		s.emit("state", { state: "paused" });
 		expect(r.controller.state.kind).toBe("paused");
-		await r.controller.pauseResume();
-		expect(s.resume).toHaveBeenCalled();
+		s.emit("state", { state: "playing" });
 		expect(r.controller.state.kind).toBe("playing");
+		expect(s.pause).not.toHaveBeenCalled();
+		expect(s.resume).not.toHaveBeenCalled();
 		s.sentence(0, 9);
 		s.word(0, 3);
 		expect(r.registry.paintedWords()).toHaveLength(1);
@@ -300,7 +343,7 @@ describe("clear-on-events wiring", () => {
 			expect(r.registry.paintedWords()).toEqual([{ start: 16, end: 17 }]);
 		});
 
-		it("while paused, restart only on resume", async () => {
+		it("while paused, restart when Univocal reports playing again", async () => {
 			const r = rig("A one. B two. C three.");
 			await r.controller.read();
 			const s = r.client.lastSession;
@@ -310,8 +353,35 @@ describe("clear-on-events wiring", () => {
 			r.note.change("edited");
 			await vi.advanceTimersByTimeAsync(1000);
 			expect(r.client.readCalls).toHaveLength(1);
-			await r.controller.pauseResume();
-			expect(s.resume).not.toHaveBeenCalled();
+			expect(r.controller.state.kind).toBe("paused");
+			// Resumed in Univocal's pill (or with ⌥⇧R): the edited text is read.
+			s.emit("state", { state: "playing" });
+			await vi.advanceTimersByTimeAsync(0);
+			expect(s.stop).toHaveBeenCalled();
+			expect(r.client.readCalls).toHaveLength(2);
+			expect(r.client.readCalls[1]?.text).toBe("A one. B two! C three.");
+			expect(r.client.readCalls[1]?.opts.startOffset).toBe(7);
+			// The new session's state is followed; the old one's is dropped.
+			s.emit("state", { state: "paused" });
+			expect(r.controller.state.kind).toBe("loading");
+			r.client.lastSession.emit("state", { state: "playing" });
+			expect(r.controller.state.kind).toBe("playing");
+			expect(r.client.readCalls).toHaveLength(2);
+		});
+
+		it("dev pause/resume while paused after an edit restarts via the playing event", async () => {
+			const r = rig("A one. B two. C three.");
+			await r.controller.read();
+			const s = r.client.lastSession;
+			s.emit("state", { state: "playing" });
+			await r.controller.devPauseResume();
+			expect(s.pause).toHaveBeenCalled();
+			expect(r.controller.state.kind).toBe("paused");
+			s.sentence(7, 13);
+			r.note.text = "A one. B two! C three.";
+			r.note.change("edited");
+			await r.controller.devPauseResume();
+			expect(s.resume).toHaveBeenCalled();
 			await vi.advanceTimersByTimeAsync(0);
 			expect(r.client.readCalls).toHaveLength(2);
 			expect(r.client.readCalls[1]?.opts.startOffset).toBe(7);

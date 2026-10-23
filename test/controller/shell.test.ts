@@ -13,16 +13,27 @@ describe("statusBarModel", () => {
 	it.each([
 		[{ kind: "notInstalled" } as const, ["Get Univocal"], ["getUnivocal"]],
 		[{ kind: "notRunning" } as const, ["Univocal off"], ["launchUnivocal"]],
-		[{ kind: "consentPending" } as const, ["Waiting for approval in Univocal…"], ["stop"]],
+		[{ kind: "connecting" } as const, ["Connecting to Univocal…"], ["cancel"]],
+		[{ kind: "consentPending" } as const, ["Waiting for approval in Univocal…"], ["cancel"]],
 		[{ kind: "denied", message: "x" } as const, ["Not allowed"], ["openSettings"]],
-		[{ kind: "playing" } as const, ["⏸", "■"], ["pauseResume", "stop"]],
-		[{ kind: "paused" } as const, ["⏵", "■"], ["pauseResume", "stop"]],
 		[{ kind: "failed", message: "boom" } as const, ["Univocal ⚠"], ["read"]],
 	])("%o", (state, labels, actions) => {
 		const m = statusBarModel(state);
 		expect(m.visible).toBe(true);
 		expect(m.buttons.map((b) => b.label)).toEqual(labels);
 		expect(m.buttons.map((b) => b.action)).toEqual(actions);
+	});
+	it.each([
+		[{ kind: "loading" } as const, "Starting…"],
+		[{ kind: "playing" } as const, "Reading aloud…"],
+		[{ kind: "paused" } as const, "Reading paused"],
+	])("%o is a passive indicator with no click action", (state, label) => {
+		const m = statusBarModel(state);
+		expect(m.visible).toBe(true);
+		expect(m.buttons).toHaveLength(1);
+		expect(m.buttons[0]?.label).toBe(label);
+		expect(m.buttons[0]?.action).toBeUndefined();
+		expect(m.buttons[0]?.title).toContain("Univocal");
 	});
 });
 
@@ -74,7 +85,7 @@ describe("dev protocol", () => {
 		}
 	});
 
-	it("routes read/pause/stop and is inert unless developer mode is on", () => {
+	it("routes read and the dev-only pause/stop, and is inert unless developer mode is on", () => {
 		const on = deps("/nonexistent");
 		const handler = devProtocolHandler(on);
 		handler({ action: "univocal-dev", cmd: "read", prefer: "selection" });

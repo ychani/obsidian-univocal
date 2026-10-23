@@ -16,14 +16,14 @@ Read notes aloud with [Univocal](https://univocalapp.com) and highlight each wor
 
 ## Usage
 
-- **Read aloud:** use the command palette (**Univocal Read Aloud: Read aloud**) or the ribbon icon. Reading starts at the selection, or at the first visible paragraph. The first time, Univocal asks whether to allow Obsidian.
-- **Pause/resume** and **Stop** are commands too, and the status bar shows ⏸ / ⏵ / ■ while reading. None of the commands has a default hotkey; set your own under **Settings → Hotkeys**.
-- The spoken word and sentence are highlighted. Switching notes stops reading. Editing the note restarts reading at the sentence you were on.
+- **Read aloud:** use the command palette (**Univocal Read Aloud: Read aloud**) or the ribbon icon. Reading starts at the selection, or at the first visible paragraph. The first time, Univocal asks whether to allow Obsidian. The command has no default hotkey; set your own under **Settings → Hotkeys**.
+- **While reading, Univocal's floating pill is the control:** pause and resume, skip sentences, change speed or voice, and stop there. Univocal's ⌥⇧R also toggles pause/resume. Read aloud and the ribbon icon do nothing while a reading is under way, and the status bar just shows **Reading aloud…** or **Reading paused**.
+- The spoken word and sentence are highlighted. Switching notes stops reading. Editing the note restarts reading at the sentence you were on (if you edit while paused, the restart happens when you resume in Univocal).
 - The status bar also says when Univocal is missing (**Get Univocal**), not running (**Univocal off**, click to start it), waiting for your approval, or not allowed.
 
 ### Univocal's read hotkey
 
-Univocal has its own global hotkey (⌥⇧R by default). With this plugin enabled, pressing it while Obsidian is in front reads the **focused note in Obsidian**, with highlighting, instead of reading the selection in Univocal's panel. Pressing it again pauses or resumes.
+Univocal has its own global hotkey (⌥⇧R by default). With this plugin enabled, pressing it while Obsidian is in front reads the **focused note in Obsidian**, with highlighting, instead of reading the selection in Univocal's panel. Pressing it again toggles pause/resume.
 
 - This works once you've allowed Obsidian in Univocal (reading aloud once is enough). After that the plugin connects quietly whenever Obsidian and Univocal are both running. It never launches Univocal or prompts you on its own.
 - With two vaults open, the vault whose window has focus answers.
@@ -75,10 +75,12 @@ With **Developer mode** on:
 
 ```
 obsidian://univocal-dev?cmd=read[&prefer=selection|document]
-obsidian://univocal-dev?cmd=pause        # pause / resume
-obsidian://univocal-dev?cmd=stop
+obsidian://univocal-dev?cmd=pause        # pause / resume (dev-only, for QA)
+obsidian://univocal-dev?cmd=stop         # dev-only, for QA
 obsidian://univocal-dev?cmd=status[&tag=…]
 ```
+
+`pause` and `stop` exist only for automated QA. The plugin has no user-facing pause or stop; users control a reading in Univocal's pill.
 
 `status` writes `univocal-dev-status.json` into the connect dir. It holds the state, session id, last word and sentence ranges, painted-range counts (`painted.word` must never exceed the ranges of one word), the current mode (`reading` / `live-preview` / `source`), the note path and the connection state. It never contains note text. Example: `open -g "obsidian://univocal-dev?cmd=status&tag=1"`.
 

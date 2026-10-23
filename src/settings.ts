@@ -181,7 +181,7 @@ export class UnivocalSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Developer").setHeading();
 		new Setting(containerEl)
 			.setName("Developer mode")
-			.setDesc("Enables the obsidian://univocal-dev URL handler (read, stop, pause, status) and the connect directory override.")
+			.setDesc("Enables the obsidian://univocal-dev URL handler (read, status, and dev-only stop and pause for QA) and the connect directory override.")
 			.addToggle((t) =>
 				t.setValue(settings.developer).onChange(async (value) => {
 					settings.developer = value;

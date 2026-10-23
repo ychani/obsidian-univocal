@@ -374,7 +374,7 @@ export class ReadAloudController {
 	private note: NoteRef | null = null;
 	/** The note's text changed while starting (before the session existed). */
 	private noteDirty = false;
-	/** The note was edited while paused: restart on resume. */
+	/** The note was edited while paused: restart when Univocal reports playing again. */
 	private pendingRestart = false;
 	private openedWithMore = false;
 	/** Exactly the text the live session was given (`read` + `append`s). */
@@ -430,7 +430,7 @@ export class ReadAloudController {
 		return () => this.listeners.delete(listener);
 	}
 
-	/** A session is starting or running (Stop applies). */
+	/** A session is starting or running. */
 	get isActive(): boolean {
 		switch (this._state.kind) {
 			case "connecting":
@@ -585,39 +585,39 @@ export class ReadAloudController {
 		await this.beginRead(note, target, at, token);
 	}
 
-	/** Ribbon / status bar: play from idle, pause while playing, resume while paused. */
-	toggle(): void {
-		switch (this._state.kind) {
-			case "playing":
-			case "loading":
-				if (this.session) void this.pauseResume();
-				return;
-			case "paused":
-				void this.pauseResume();
-				return;
-			case "connecting":
-			case "consentPending":
-				return;
-			default:
-				void this.read();
-		}
+	/**
+	 * The "Read aloud" command and the ribbon: start reading the active note.
+	 * Does nothing while a reading is starting or running: Univocal's
+	 * floating pill is the only in-session control (pause, skip, speed,
+	 * voice, stop), and Univocal's ⌥⇧R toggles pause/resume. Its actions
+	 * arrive as ordinary session events, which this controller follows.
+	 */
+	readAloud(): void {
+		if (this.disposed || this.isActive) return;
+		void this.read();
 	}
 
-	async pauseResume(): Promise<void> {
+	/**
+	 * Developer-only (`obsidian://univocal-dev?cmd=pause`, for QA): pause or
+	 * resume the session as if from Univocal's pill. Not a user control.
+	 */
+	async devPauseResume(): Promise<void> {
 		const session = this.session;
 		if (!session) return;
 		if (this._state.kind === "paused") {
-			if (this.pendingRestart && this.note) {
-				this.restartFromCurrent();
-				return;
-			}
+			// An edit while paused restarts on the resulting `state: playing`.
 			await session.resume().catch((e) => this.log(`resume failed: ${describe(e).message ?? e}`));
 		} else {
 			await session.pause().catch((e) => this.log(`pause failed: ${describe(e).message ?? e}`));
 		}
 	}
 
-	/** Stop reading (or the attempt to start) and clear the highlights. */
+	/**
+	 * Stop reading (or the attempt to start) and clear the highlights. Not a
+	 * user control while reading: a note switch, leaf change, unload, the
+	 * status bar's cancel while connecting / awaiting approval, and Forget
+	 * authorization end a reading this way.
+	 */
 	stop(): void {
 		if (!this.isActive && !this.session && !this.note) return;
 		const old = this.session;
@@ -825,7 +825,14 @@ export class ReadAloudController {
 				"state",
 				guard(({ state, detail }) => {
 					if (state === "loading") this.setState(detail ? { kind: "loading", detail } : { kind: "loading" });
-					else if (state === "playing") this.setState({ kind: "playing" });
+					else if (state === "playing") {
+						if (this.pendingRestart && this.note && this.surface) {
+							// Univocal resumed after an edit: read the edited text.
+							this.restartFromCurrent();
+							return;
+						}
+						this.setState({ kind: "playing" });
+					}
 					else this.setState({ kind: "paused" });
 				}),
 			),
@@ -908,7 +915,7 @@ export class ReadAloudController {
 			return;
 		}
 		// Edited: offsets no longer match. Drop highlights; restart from the
-		// re-mapped sentence (on resume when paused, else after a debounce).
+		// re-mapped sentence (when Univocal resumes if paused, else after a debounce).
 		this.surface?.clear();
 		this.needsRepaint = true;
 		if (this._state.kind === "paused") {

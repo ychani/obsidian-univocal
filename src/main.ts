@@ -287,7 +287,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 		if (this.factories.editorExtensions) this.registerEditorExtension(this.factories.editorExtensions);
 
 		this.addCommands();
-		this.addRibbonIcon("audio-lines", "Read aloud with Univocal", () => this.controller.toggle());
+		this.addRibbonIcon("audio-lines", "Read aloud with Univocal", () => this.controller.readAloud());
 
 		this.statusBar = new StatusBar(this.addStatusBarItem(), (action) => this.runStatusAction(action));
 		this.statusBar.render(this.controller.state);
@@ -316,7 +316,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 				isEnabled: () => this.settings.developer,
 				connectDir: () => this.connectDir(),
 				read: (prefer) => void this.controller.read(prefer ? { prefer } : {}),
-				pauseResume: () => void this.controller.pauseResume(),
+				pauseResume: () => void this.controller.devPauseResume(),
 				stop: () => this.controller.stop(),
 				status: () => ({ ...this.controller.devStatus(), dom: this.domProbe() }),
 				log: (message) => logger.warn(message),
@@ -379,26 +379,8 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 			name: "Read aloud",
 			checkCallback: (checking) => {
 				if (!this.app.workspace.getActiveViewOfType(MarkdownView)) return false;
-				if (!checking) void this.controller.read();
-				return true;
-			},
-		});
-		this.addCommand({
-			id: "pause-resume",
-			name: "Pause/resume",
-			checkCallback: (checking) => {
-				const k = this.controller.state.kind;
-				if (k !== "playing" && k !== "paused" && k !== "loading") return false;
-				if (!checking) void this.controller.pauseResume();
-				return true;
-			},
-		});
-		this.addCommand({
-			id: "stop",
-			name: "Stop",
-			checkCallback: (checking) => {
-				if (!this.controller.isActive) return false;
-				if (!checking) this.controller.stop();
+				// A no-op while reading: Univocal's pill is the in-session control.
+				if (!checking) this.controller.readAloud();
 				return true;
 			},
 		});
@@ -407,12 +389,10 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 	private runStatusAction(action: StatusAction): void {
 		switch (action) {
 			case "read":
-				void this.controller.read();
+				this.controller.readAloud();
 				return;
-			case "pauseResume":
-				void this.controller.pauseResume();
-				return;
-			case "stop":
+			case "cancel":
+				// Cancel a start that is connecting or awaiting approval.
 				this.controller.stop();
 				return;
 			case "getUnivocal":
