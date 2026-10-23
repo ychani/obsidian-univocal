@@ -4,7 +4,8 @@ import * as path from "node:path";
 import type { Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { type App, MarkdownView, Notice, Plugin, type TFile } from "obsidian";
-import { type Logger, type TokenStore, UnivocalClient, resolveConnectDir } from "./connect/index";
+import { type Logger, type TokenStore, UnivocalClient, createDefaultTokenStore, resolveConnectDir } from "./connect/index";
+import { univocalFactories } from "./highlight/factories";
 import {
 	type NoteChange,
 	type NoteHost,
@@ -43,20 +44,12 @@ export interface ShellFactories {
 	editorExtensions?: Extension[];
 }
 
-function notWired(name: string): never {
-	throw new Error(`Univocal Read Aloud: ${name} is not wired yet (integration seam in src/main.ts)`);
-}
-
 const FACTORIES: ShellFactories = {
-	tokenStore: () => ({
-		get: async () => notWired("tokenStore.get"),
-		set: async () => notWired("tokenStore.set"),
-		delete: async () => notWired("tokenStore.delete"),
-	}),
-	readingTextMap: () => notWired("readingTextMap"),
-	readingHighlighter: () => notWired("readingHighlighter"),
-	editorTextMap: () => notWired("editorTextMap"),
-	editorHighlighter: () => notWired("editorHighlighter"),
+	tokenStore: (logger) =>
+		createDefaultTokenStore({
+			onPrimaryError: (op, e) => logger.warn(`Keychain ${op} failed; using the file fallback`, e),
+		}),
+	...univocalFactories,
 };
 
 /**
