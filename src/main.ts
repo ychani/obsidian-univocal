@@ -84,6 +84,32 @@ interface HighlightRegistry {
 	get(name: string): { size: number } | undefined;
 }
 
+/** Dev status only: what is actually in the DOM, independent of the painters' own bookkeeping. */
+export interface DomProbe {
+	highlightApi: boolean;
+	cssWordText: string[];
+	cssSentenceRanges: number;
+	editorWordEls: string[];
+	editorSentenceEls: number;
+	markWordEls: number;
+}
+
+function probeDom(doc: Document, root: HTMLElement | null): DomProbe {
+	const win = doc.defaultView as (Window & { CSS?: { highlights?: Map<string, Set<Range>> } }) | null;
+	const reg = win?.CSS?.highlights;
+	const word = reg?.get(WORD_HIGHLIGHT);
+	const sentence = reg?.get(SENTENCE_HIGHLIGHT);
+	const scope: ParentNode = root ?? doc;
+	return {
+		highlightApi: !!reg,
+		cssWordText: word ? [...word].map((r) => r.toString()) : [],
+		cssSentenceRanges: sentence?.size ?? 0,
+		editorWordEls: [...scope.querySelectorAll(".cm-content .univocal-word")].map((e) => e.textContent ?? ""),
+		editorSentenceEls: scope.querySelectorAll(".cm-content .univocal-sentence").length,
+		markWordEls: scope.querySelectorAll("mark.univocal-word").length,
+	};
+}
+
 function countCssHighlights(doc: Document): PaintedCount {
 	const win = doc.defaultView as (Window & { CSS?: { highlights?: HighlightRegistry } }) | null;
 	const reg = win?.CSS?.highlights;
@@ -290,7 +316,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 				read: (prefer) => void this.controller.read(prefer ? { prefer } : {}),
 				pauseResume: () => void this.controller.pauseResume(),
 				stop: () => this.controller.stop(),
-				status: () => this.controller.devStatus(),
+				status: () => ({ ...this.controller.devStatus(), dom: this.domProbe() }),
 				log: (message) => logger.warn(message),
 			}),
 		);
@@ -332,6 +358,12 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 
 	private connectDir(): string {
 		return resolveConnectDir(this.settings.connectDir || undefined);
+	}
+
+	private domProbe(): DomProbe {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const root = view?.containerEl ?? null;
+		return probeDom(root?.ownerDocument ?? document, root);
 	}
 
 	private connectDirChanged(): void {
