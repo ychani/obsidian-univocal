@@ -35,6 +35,12 @@ export interface TextEntry {
 export interface ReadingViewTextMapOptions {
 	/** Extra selectors to skip, on top of the defaults below. */
 	skipSelectors?: string[];
+	/**
+	 * Whether every section of the note is rendered (drives `complete`).
+	 * The DOM alone cannot tell; the plugin shell knows from
+	 * `previewMode.renderer`. Default: always `true`.
+	 */
+	isComplete?: () => boolean;
 }
 
 /**
@@ -62,6 +68,21 @@ export interface ReadingViewTextMap extends TextMap<Range[]> {
 	offsetAt(node: Node, offsetInNode: number): number | null;
 	/** Re-walk the root; returns text appended after the current end, or `null` if nothing new. */
 	extend(): string | null;
+	/** The element the map was built from. */
+	readonly root: HTMLElement;
+	/**
+	 * Re-walk the root after a re-render and re-bind entries to the current
+	 * text nodes, WITHOUT appending. Returns `inSync`: `true` when the rendered
+	 * text still matches `text` (highlights keep working), `false` when the
+	 * content changed — restart from `remapOffset(map.text, fresh.text, cur)`.
+	 */
+	remap(): boolean;
+	/**
+	 * Result of the last walk (build, `extend`, `remap`): `false` when a
+	 * rendered section's text no longer matches the session text. Sections
+	 * virtualised away above or below are not a mismatch.
+	 */
+	readonly inSync: boolean;
 }
 
 export type ReadingViewTextMapFactory = (root: HTMLElement, options?: ReadingViewTextMapOptions) => ReadingViewTextMap;

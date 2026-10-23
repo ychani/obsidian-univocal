@@ -18,6 +18,12 @@
 import type { EditorView } from "@codemirror/view";
 import type { EditorRange } from "../textmap/types";
 
+/** Live ranges actually painted right now (QA / dev status file). */
+export interface PaintedCount {
+	word: number;
+	sentence: number;
+}
+
 export interface Highlighter<R> {
 	/** Replace the word range (`null` = none). */
 	setWord(range: R | null): void;
@@ -27,6 +33,12 @@ export interface Highlighter<R> {
 	clear(): void;
 	/** `clear()` + release all resources. Further calls are no-ops. */
 	dispose(): void;
+	/**
+	 * What is painted right now: `CSS.highlights` Range counts, `<mark>`
+	 * elements, or editor decorations. With single-text-node words this is
+	 * at most 1 each — the invariant QA checks.
+	 */
+	paintedRangeCount?(): PaintedCount;
 }
 
 /**
@@ -35,8 +47,21 @@ export interface Highlighter<R> {
  * `univocal-word` / `univocal-sentence`, styled in `styles.css` via
  * `::highlight(...)`.
  */
-export type ReadingViewHighlighter = Highlighter<Range[]>;
-export type ReadingViewHighlighterFactory = (doc: Document) => ReadingViewHighlighter;
+export type ReadingViewHighlighter = Highlighter<Range[]> & {
+	/**
+	 * `css-highlight`: CSS Custom Highlight API (Obsidian's Electron always has it).
+	 * `mark`: fallback that wraps the ranges in `<mark class="univocal-word">` /
+	 * `<mark class="univocal-sentence">` and fully unwraps on every set/clear.
+	 */
+	readonly mode: "css-highlight" | "mark";
+};
+
+export interface ReadingViewHighlighterOptions {
+	/** Use the `<mark>` fallback even when `CSS.highlights` exists (QA). */
+	forceFallback?: boolean;
+}
+
+export type ReadingViewHighlighterFactory = (doc: Document, options?: ReadingViewHighlighterOptions) => ReadingViewHighlighter;
 
 /**
  * Editor: a `StateField<DecorationSet>` driven by a `StateEffect<{word, sentence}>`
@@ -44,3 +69,7 @@ export type ReadingViewHighlighterFactory = (doc: Document) => ReadingViewHighli
  */
 export type EditorHighlighter = Highlighter<EditorRange>;
 export type EditorHighlighterFactory = (view: EditorView) => EditorHighlighter;
+
+/** Highlight names (CSS Custom Highlight API) and class names (editor marks, `<mark>` fallback). */
+export const WORD_HIGHLIGHT = "univocal-word";
+export const SENTENCE_HIGHLIGHT = "univocal-sentence";

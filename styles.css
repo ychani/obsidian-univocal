@@ -1,0 +1,78 @@
+/* Univocal Read Aloud — word and sentence highlighting.
+ *
+ * Three painters share these colours:
+ *   - reading view: CSS Custom Highlight API, ::highlight(univocal-*)
+ *   - editor (CM6): Decoration.mark classes inside .cm-content
+ *   - fallback without CSS.highlights: <mark class="univocal-*">
+ * The word is painted above the sentence (higher priority / later class).
+ */
+
+/* ── Background style (default) ─────────────────────────────── */
+
+::highlight(univocal-sentence) {
+	background-color: var(--text-highlight-bg);
+}
+
+::highlight(univocal-word) {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.cm-content .univocal-sentence,
+mark.univocal-sentence {
+	background-color: var(--text-highlight-bg);
+	color: inherit;
+}
+
+.cm-content .univocal-word,
+mark.univocal-word,
+mark.univocal-sentence.univocal-word {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-radius: var(--radius-s, 2px);
+}
+
+/* <mark> fallback: no extra box, so text never shifts. */
+mark.univocal-sentence,
+mark.univocal-word {
+	padding: 0;
+	margin: 0;
+}
+
+/* ── Underline style: body.univocal-highlight-underline ─────────────
+ * For themes whose own backgrounds (.cm-line, mark, callouts) clash with
+ * the accent fill. */
+
+body.univocal-highlight-underline ::highlight(univocal-sentence) {
+	background-color: transparent;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
+	text-decoration-color: var(--text-faint);
+	text-decoration-thickness: 1px;
+}
+
+body.univocal-highlight-underline ::highlight(univocal-word) {
+	background-color: transparent;
+	color: inherit;
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-color: var(--interactive-accent);
+	text-decoration-thickness: 3px;
+}
+
+body.univocal-highlight-underline .cm-content .univocal-sentence,
+body.univocal-highlight-underline mark.univocal-sentence {
+	background-color: transparent;
+	color: inherit;
+	text-decoration: underline dotted var(--text-faint) 1px;
+	text-underline-offset: 3px;
+}
+
+body.univocal-highlight-underline .cm-content .univocal-word,
+body.univocal-highlight-underline mark.univocal-word,
+body.univocal-highlight-underline mark.univocal-sentence.univocal-word {
+	background-color: transparent;
+	color: inherit;
+	text-decoration: underline solid var(--interactive-accent) 3px;
+	text-underline-offset: 3px;
+}
