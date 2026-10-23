@@ -1,0 +1,33 @@
+{
+	"name": "obsidian-univocal",
+	"version": "0.1.0",
+	"description": "Read notes aloud with Univocal and highlight each word as it's spoken.",
+	"main": "main.js",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"typecheck": "tsc -noEmit",
+		"test": "vitest run",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"univocal",
+		"tts",
+		"read-aloud"
+	],
+	"author": "NarNar Labs",
+	"license": "MIT",
+	"devDependencies": {
+		"@codemirror/state": "6.7.6",
+		"@codemirror/view": "6.43.13",
+		"@types/node": "^26.6.5",
+		"esbuild": "^0.28.2",
+		"jsdom": "^30.1.3",
+		"obsidian": "^1.14.4",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.5"
+	}
+}

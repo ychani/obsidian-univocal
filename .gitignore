@@ -1,0 +1,17 @@
+# editors
+.vscode
+*.iml
+.idea
+
+# dependencies
+node_modules
+
+# Build output: main.js is attached to GitHub releases, not committed.
+main.js
+*.map
+
+# Obsidian plugin settings (per-vault)
+data.json
+
+# macOS
+.DS_Store

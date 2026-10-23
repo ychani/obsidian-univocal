@@ -1,0 +1,8 @@
+{
+	"name": "@univocal/connect",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Univocal Connect protocol client (SPEC v1) for Node/Electron. No Obsidian dependency.",
+	"main": "index.ts",
+	"license": "MIT"
+}
