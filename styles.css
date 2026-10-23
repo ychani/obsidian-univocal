@@ -9,8 +9,11 @@
 
 /* ── Background style (default) ─────────────────────────────── */
 
+
 ::highlight(univocal-sentence) {
-	background-color: var(--text-highlight-bg);
+	/* Light wash of the accent; --text-highlight-bg is invisible on many themes.
+	 * Inlined: custom properties declared on body don't reach ::highlight(). */
+	background-color: color-mix(in srgb, var(--interactive-accent) 22%, transparent);
 }
 
 ::highlight(univocal-word) {
@@ -20,7 +23,9 @@
 
 .cm-content .univocal-sentence,
 mark.univocal-sentence {
-	background-color: var(--text-highlight-bg);
+	/* Light wash of the accent; --text-highlight-bg is invisible on many themes.
+	 * Inlined: custom properties declared on body don't reach ::highlight(). */
+	background-color: color-mix(in srgb, var(--interactive-accent) 22%, transparent);
 	color: inherit;
 }
 

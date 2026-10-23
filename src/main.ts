@@ -89,6 +89,7 @@ export interface DomProbe {
 	highlightApi: boolean;
 	cssWordText: string[];
 	cssSentenceRanges: number;
+	cssSentenceText: string[];
 	editorWordEls: string[];
 	editorSentenceEls: number;
 	markWordEls: number;
@@ -104,6 +105,7 @@ function probeDom(doc: Document, root: HTMLElement | null): DomProbe {
 		highlightApi: !!reg,
 		cssWordText: word ? [...word].map((r) => r.toString()) : [],
 		cssSentenceRanges: sentence?.size ?? 0,
+		cssSentenceText: sentence ? [...sentence].map((r) => r.toString()) : [],
 		editorWordEls: [...scope.querySelectorAll(".cm-content .univocal-word")].map((e) => e.textContent ?? ""),
 		editorSentenceEls: scope.querySelectorAll(".cm-content .univocal-sentence").length,
 		markWordEls: scope.querySelectorAll("mark.univocal-word").length,
