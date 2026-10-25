@@ -174,6 +174,9 @@ export class UnivocalClient {
 				throw e;
 			}
 		}
+		// A wake (SPEC §16.5) is the server inviting us back after the user clicked
+		// Connect in Univocal, so the post-revoke hold doesn't apply to it.
+		if (opts.wakeRequestId) this.revokedUntil = 0;
 		if (Date.now() < this.revokedUntil) {
 			throw new UnivocalError("unauthorized", "Univocal revoked this app's access. Try again later.", { fatal: true, reason: "revoked" });
 		}

@@ -270,6 +270,23 @@ describe("handshake", () => {
 		expect(ctx.server.conns).toHaveLength(1);
 	});
 
+	it("a wake connect bypasses the post-revoke hold", async () => {
+		const ctx = await setup({ reconnectDelaysMs: [20] });
+		await ctx.store.set(ctx.key, "uc1_t");
+		const p = ctx.client.connect();
+		const { conn } = await ctx.server.acceptNext();
+		await p;
+		conn.send({ type: "error", code: "unauthorized", reason: "revoked", message: "revoked", fatal: true });
+		conn.end();
+		await waitFor(() => ctx.client.state.kind === "disconnected", 2000, "disconnect");
+		await ctx.client.whenIdle();
+		const woke = ctx.client.connect({ wakeRequestId: "w1" });
+		const { hello } = await ctx.server.acceptNext({ consent: "uc1_back" });
+		await woke;
+		expect(hello.wakeRequestId).toBe("w1");
+		expect(hello.token).toBeUndefined();
+	});
+
 	it("handshake timeout", async () => {
 		const { server, client } = await setup();
 		const p = client.connect({ timeoutMs: 100 });
