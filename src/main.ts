@@ -270,7 +270,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 		const tokenStore = this.factories.tokenStore(logger);
 		this.client = new UnivocalClient({
 			connectDir: this.settings.connectDir || undefined,
-			clientInfo: { id: CLIENT_ID, name: "Obsidian", version: this.manifest.version },
+			clientInfo: { id: CLIENT_ID, name: "Obsidian", version: this.manifest.version, instance: this.app.vault.getName() },
 			capabilities: ["word-events", "sentence-events", "hotkey-target"],
 			tokenStore,
 			logger,

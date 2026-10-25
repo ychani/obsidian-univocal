@@ -13,6 +13,12 @@ export interface ClientInfo {
 	name: string;
 	version: string;
 	bundleId?: string;
+	/**
+	 * Which instance of the app this connection is (an Obsidian vault name, a
+	 * workspace…), sent as `hello.client.instance`. A server can add it to a
+	 * wake URL it opens on the user's request (SPEC §16.5). At most 128 chars.
+	 */
+	instance?: string;
 }
 
 /** `welcome.server` (SPEC §5.2). */

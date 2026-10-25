@@ -208,6 +208,14 @@ describe("handshake", () => {
 		expect(client.state).toEqual({ kind: "disconnected", error: { code: "consentDenied", reason: "user" } });
 	});
 
+	it("hello carries client.instance when given", async () => {
+		const { server, client } = await setup({ clientInfo: { id: "md.obsidian.plugin.univocal", name: "Obsidian", version: "1", instance: "Work vault" } });
+		const p = client.connect();
+		const { hello } = await server.acceptNext({ consent: "uc1_i" });
+		await p;
+		expect((hello.client as Record<string, unknown>).instance).toBe("Work vault");
+	});
+
 	it("connect({wakeRequestId}) sends it in hello, not quiet", async () => {
 		const { server, client } = await setup();
 		const p = client.connect({ wakeRequestId: "w7" });

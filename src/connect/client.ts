@@ -443,6 +443,7 @@ export class UnivocalClient {
 		const c = this.options.clientInfo;
 		const client: Record<string, unknown> = { id: c.id, name: c.name, version: c.version };
 		if (c.bundleId) client.bundleId = c.bundleId;
+		if (c.instance) client.instance = c.instance.slice(0, 128);
 		const hello: Record<string, unknown> = {
 			type: "hello",
 			protocol: PROTOCOL_NAME,
