@@ -368,7 +368,7 @@ export class UnivocalClient {
 				socket.destroy();
 				throw cancelled();
 			}
-			return await this.handshake(socket, discovery, token, quiet, opts.timeoutMs ?? DEFAULT_HANDSHAKE_TIMEOUT_MS);
+			return await this.handshake(socket, discovery, token, quiet, opts.timeoutMs ?? DEFAULT_HANDSHAKE_TIMEOUT_MS, opts.wakeRequestId);
 		} catch (e) {
 			const err = e instanceof UnivocalError ? e : new UnivocalError("transport", (e as Error)?.message ?? String(e));
 			if (gen === this.generation) this.setState({ kind: "disconnected", error: err.connectError });
@@ -399,7 +399,14 @@ export class UnivocalClient {
 		}
 	}
 
-	private handshake(socket: net.Socket, discovery: Discovery, token: string | null, quiet: boolean, timeoutMs: number): Promise<ServerInfo> {
+	private handshake(
+		socket: net.Socket,
+		discovery: Discovery,
+		token: string | null,
+		quiet: boolean,
+		timeoutMs: number,
+		wakeRequestId?: string,
+	): Promise<ServerInfo> {
 		const link: Link = {
 			id: this.nextLinkId++,
 			socket,
@@ -442,6 +449,7 @@ export class UnivocalClient {
 		};
 		if (token) hello.token = token;
 		if (quiet) hello.quiet = true;
+		if (wakeRequestId) hello.wakeRequestId = wakeRequestId;
 		this.log.debug(`[univocal] hello client=${c.id} token=${token ? "present" : "absent"} quiet=${quiet}`);
 
 		return new Promise<ServerInfo>((resolve, reject) => {

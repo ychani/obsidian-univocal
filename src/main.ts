@@ -17,6 +17,7 @@ import {
 	createMappedSurface,
 } from "./controller";
 import { DEV_PROTOCOL_ACTION, devProtocolHandler } from "./devProtocol";
+import { WAKE_PROTOCOL_ACTION, wakeProtocolHandler } from "./wakeProtocol";
 import type { EditorHighlighterFactory, ReadingViewHighlighterFactory } from "./highlight/types";
 import { UNIVOCAL_URL, UnivocalSettingTab, type UnivocalSettings, normalizeSettings } from "./settings";
 import { StatusBar, type StatusAction } from "./statusBar";
@@ -319,6 +320,14 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 				pauseResume: () => void this.controller.devPauseResume(),
 				stop: () => this.controller.stop(),
 				status: () => ({ ...this.controller.devStatus(), dom: this.domProbe() }),
+				log: (message) => logger.warn(message),
+			}),
+		);
+
+		this.registerObsidianProtocolHandler(
+			WAKE_PROTOCOL_ACTION,
+			wakeProtocolHandler({
+				wake: (requestId) => void this.controller.wake(requestId),
 				log: (message) => logger.warn(message),
 			}),
 		);

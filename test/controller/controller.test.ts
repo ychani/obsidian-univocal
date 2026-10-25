@@ -642,6 +642,24 @@ describe("connection", () => {
 	});
 });
 
+describe("wake (obsidian://univocal-connect)", () => {
+	it("connects with the wake request id, without launching, and ends idle", async () => {
+		const r = rig();
+		await r.controller.wake("w1");
+		expect(r.client.connect).toHaveBeenCalledWith({ launch: false, wakeRequestId: "w1" });
+		expect(r.client.readCalls).toHaveLength(0);
+		expect(r.controller.state.kind).toBe("idle");
+	});
+
+	it("does nothing when already connected", async () => {
+		const r = rig();
+		await r.controller.wake("w1");
+		r.client.connect.mockClear();
+		await r.controller.wake("w2");
+		expect(r.client.connect).not.toHaveBeenCalled();
+	});
+});
+
 describe("devStatus", () => {
 	it("reports state, session, last ranges, painted counts and mode", async () => {
 		const r = rig();

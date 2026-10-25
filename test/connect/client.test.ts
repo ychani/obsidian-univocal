@@ -208,6 +208,15 @@ describe("handshake", () => {
 		expect(client.state).toEqual({ kind: "disconnected", error: { code: "consentDenied", reason: "user" } });
 	});
 
+	it("connect({wakeRequestId}) sends it in hello, not quiet", async () => {
+		const { server, client } = await setup();
+		const p = client.connect({ wakeRequestId: "w7" });
+		const { hello } = await server.acceptNext({ consent: "uc1_w" });
+		await p;
+		expect(hello.wakeRequestId).toBe("w7");
+		expect(hello.quiet).toBeUndefined();
+	});
+
 	it("connectQuietly: no token → no connection at all", async () => {
 		const { server, client } = await setup();
 		expect(await client.connectQuietly()).toBeNull();

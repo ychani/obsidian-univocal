@@ -106,6 +106,8 @@ export interface ConnectCallOptions {
 	quiet?: boolean;
 	/** Handshake timeout before any consent message (ms). Default 10000. */
 	timeoutMs?: number;
+	/** The `requestId` from a wake URL (SPEC §16.5), sent as `hello.wakeRequestId`. */
+	wakeRequestId?: string;
 }
 
 export type ConnectError =

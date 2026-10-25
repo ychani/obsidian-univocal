@@ -642,6 +642,26 @@ export class ReadAloudController {
 		}
 	}
 
+	/**
+	 * Univocal opened `obsidian://univocal-connect?requestId=…` (SPEC §16.5):
+	 * connect now with `hello{wakeRequestId}`. Not quiet, so a first connect
+	 * shows Univocal's consent prompt. Never launches Univocal and never opens
+	 * or focuses anything. Already connected: nothing to do.
+	 */
+	async wake(requestId: string): Promise<void> {
+		if (this.disposed || this.client.state.kind === "connected") return;
+		const token = this.token;
+		this.setState({ kind: "connecting" });
+		try {
+			const server = await this.client.connect({ launch: false, wakeRequestId: requestId });
+			if (server) this.server = server;
+			if (token === this.token && !this.session) this.setState({ kind: "idle" });
+		} catch (e) {
+			if (token !== this.token) return;
+			this.failConnect(e, false);
+		}
+	}
+
 	/** Settings → "Forget authorization": disconnect and delete the stored token. */
 	async forgetAuthorization(): Promise<void> {
 		this.stop();
