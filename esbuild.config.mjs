@@ -28,7 +28,8 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
-	minify: prod,
+	// Keep the public bundle readable for community-directory review.
+	minify: false,
 });
 
 if (prod) {

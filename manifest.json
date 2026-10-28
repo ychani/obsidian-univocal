@@ -2,7 +2,7 @@
 	"id": "univocal-read-aloud",
 	"name": "Univocal Read Aloud",
 	"version": "0.1.0",
-	"minAppVersion": "1.7.2",
+	"minAppVersion": "1.12.7",
 	"description": "Read notes aloud with Univocal and highlight each word as it's spoken.",
 	"author": "NarNar Labs",
 	"authorUrl": "https://univocalapp.com",

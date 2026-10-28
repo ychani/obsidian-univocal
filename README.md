@@ -2,20 +2,23 @@
 
 Read notes aloud with [Univocal](https://univocalapp.com) and highlight each word as it's spoken, in reading view and in Live Preview or source mode.
 
-> Desktop only (macOS). Requires the Univocal app.
+> **Public beta · macOS desktop only.** Requires a Connect-capable build of the [Univocal app](https://univocalapp.com). The plugin is free; continued use of Univocal after its trial requires a paid Univocal licence. No plugin account is required.
+
+This beta is not yet listed in Obsidian Community plugins. Use the manual installation below.
 
 ## Install
 
 **Manual (now):**
 
-1. Download `main.js`, `manifest.json` and `styles.css` from the latest [GitHub release](../../releases).
-2. Copy them into `<your vault>/.obsidian/plugins/univocal-read-aloud/`.
+1. Download the `univocal-read-aloud-0.1.0.zip` plugin bundle (or the three separate files: `main.js`, `manifest.json` and `styles.css`) from the [0.1.0 beta release](https://github.com/ychani/obsidian-univocal/releases/tag/0.1.0).
+2. Unzip the bundle and copy the three files into `<your vault>/.obsidian/plugins/univocal-read-aloud/`.
 3. In Obsidian, open **Settings → Community plugins**, reload the list and enable **Univocal Read Aloud**.
 
-**Community plugin store (later):** once the plugin is listed, search for "Univocal Read Aloud" in **Settings → Community plugins → Browse**.
+**Community plugin directory (pending publication):** once the plugin is listed, search for "Univocal Read Aloud" in **Settings → Community plugins → Browse**.
 
 ## Usage
 
+- **Connect without starting a reading:** in Univocal, open **Settings → Connections → Obsidian → Set up**. After installing and enabling the plugin in the vault you want to use, click **Connect**, then approve the request in Univocal.
 - **Read aloud:** use the command palette (**Univocal Read Aloud: Read aloud**) or the ribbon icon. Reading starts at the selection, or at the first visible paragraph. The first time, Univocal asks whether to allow Obsidian. The command has no default hotkey; set your own under **Settings → Hotkeys**.
 - **While reading, Univocal's floating pill is the control:** pause and resume, skip sentences, change speed or voice, and stop there. Univocal's ⌥⇧R also toggles pause/resume. Read aloud and the ribbon icon do nothing while a reading is under way, and the status bar just shows **Reading aloud…** or **Reading paused**.
 - The spoken word and sentence are highlighted. Switching notes stops reading. Editing the note restarts reading at the sentence you were on (if you edit while paused, the restart happens when you resume in Univocal).
@@ -32,7 +35,9 @@ Univocal has its own global hotkey (⌥⇧R by default). With this plugin enable
 ## Privacy
 
 - Note text goes only to Univocal on this Mac, over a local Unix socket. Nothing is sent over the network by this plugin.
-- Univocal's grant for Obsidian (a token) is stored in the **macOS Keychain**, never in the vault, so it isn't synced. **Settings → Forget authorization** deletes it.
+- Univocal's grant for Obsidian (a token) is stored in the **macOS Keychain**. If Keychain access fails, the plugin uses a file readable only by your user at `~/Library/Application Support/obsidian-univocal/tokens.json`. Neither location is inside the vault or synced with your notes. **Settings → Forget authorization** removes the stored token.
+- The plugin reads Univocal's local connection-discovery files outside the vault to find its Unix socket. It uses the macOS `security` tool for Keychain access and Launch Services to locate or start Univocal when you ask it to read. It does not install or update the Univocal app.
+- No telemetry or analytics are collected. The plugin makes no remote network requests; opening an installation/help link uses your browser.
 - The plugin's `data.json` only holds preferences (rate, highlight style, hotkey routing, developer options).
 
 ## Settings
@@ -44,6 +49,12 @@ Univocal has its own global hotkey (⌥⇧R by default). With this plugin enable
 | Answer Univocal's read hotkey | Off: Univocal reads in its own panel. |
 | Authorization | Status, **Ask again**, **Forget authorization**. |
 | Developer mode | Enables the `obsidian://univocal-dev` URL handler and the connect directory override. |
+
+## Updating and removing
+
+Until the plugin is listed in Community plugins, update by replacing the three plugin files with files from a newer GitHub release, then reload Obsidian. Your plugin preferences remain in `data.json`. Once listed, use Obsidian’s **Check for updates** control. The plugin never installs or updates itself.
+
+To disconnect, use **Revoke** beside Obsidian in Univocal. To remove the saved credential too, use the plugin’s **Forget authorization** before uninstalling it through Obsidian’s Community plugins settings.
 
 ## Development
 
