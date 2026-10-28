@@ -1,10 +1,10 @@
 # Publishing a plugin release
 
-1. Update `version` in `manifest.json` and `package.json`, and add the minimum supported Obsidian version to `versions.json`.
-2. Run `pnpm test` and `pnpm build`. Set `UNIVOCAL_MOCK_BIN` to the protocol mock to include all integration tests.
-3. Create a Git tag matching the manifest version exactly (no `v` prefix).
-4. Attach `main.js`, `manifest.json`, and `styles.css` to the GitHub release. Also attach a zip containing only these three files for manual installation.
-5. Describe compatibility, installation, and known beta limitations in the release notes.
-6. For the first Community directory listing, submit https://github.com/ychani/obsidian-univocal at https://community.obsidian.md after signing in and linking the maintainer's GitHub account. Do not advertise a marketplace link until the listing is published.
+1. Update version in package.json and manifest.json; add its minimum Obsidian version to versions.json.
+2. Run `pnpm lint`, `pnpm test` and `pnpm build`. Set UNIVOCAL_MOCK_BIN to include protocol integration tests.
+3. Commit and push main. The read-only CI job must pass.
+4. Create and push a tag equal to the manifest version, without a `v` prefix.
+5. GitHub Actions verifies the tag/version match, builds from the frozen lockfile, generates provenance attestations, and publishes main.js, manifest.json and styles.css. Do not attach extra files to directory releases or mark them as GitHub prereleases.
+6. Verify the GitHub release and attestations. Refresh the Obsidian Community entry through its UI, respecting its cooldown, and inspect the new review before claiming findings are resolved.
 
-The public plugin is macOS desktop only. Its initial supported Obsidian version is 1.12.7; earlier versions have not been verified. A Connect-capable Univocal build is required.
+The plugin supports macOS desktop and Obsidian 1.12.7 or later. A Connect-capable Univocal build is required. The source repo is https://github.com/ychani/obsidian-univocal and the listing is https://community.obsidian.md/plugins/univocal-read-aloud.

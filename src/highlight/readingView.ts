@@ -279,7 +279,8 @@ class MarkHighlighter implements ReadingViewHighlighter {
 					pieces.push(text);
 					continue;
 				}
-				const mark = this.doc.createElement("mark");
+				const owner = this.doc.win as Window & { createEl: typeof createEl };
+				const mark = owner.createEl("mark");
 				const classes: string[] = [];
 				if (flags & SENTENCE_FLAG) classes.push(SENTENCE_HIGHLIGHT);
 				if (flags & WORD_FLAG) classes.push(WORD_HIGHLIGHT);

@@ -18,6 +18,7 @@ export default defineConfig({
 				test: {
 					name: "jsdom",
 					environment: "jsdom",
+					setupFiles: ["test/helpers/obsidianDom.ts"],
 					include: DOM_TESTS,
 				},
 			},

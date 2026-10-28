@@ -1,3 +1,4 @@
+import * as nodeTimers from "node:timers";
 /**
  * Read-aloud controller (plan §3–§5), modelled on PreviewMD's
  * ReadAloudController. Obsidian-free on purpose: it talks to Obsidian through
@@ -261,7 +262,7 @@ function snapToCodePoint(text: string, i: number): number {
 
 const TERMINAL = /[.!?…。！？]/;
 const CLOSER = /["'”’)\]]/;
-const SPACE = /[ \t ]/;
+const SPACE = /[ \t\u00a0]/;
 
 /** Start of the sentence containing `pos`, looking back at most `maxBack` units (port of read-aloud-core.js). */
 export function sentenceStartBefore(text: string, pos: number, maxBack: number): number {
@@ -388,14 +389,14 @@ export class ReadAloudController {
 	private hotkeyPending = false;
 	private sessionUnsubs: Unsubscribe[] = [];
 	private noteUnsub: Unsubscribe | null = null;
-	private editTimer: ReturnType<typeof setTimeout> | null = null;
-	private hotkeyTimer: ReturnType<typeof setTimeout> | null = null;
+	private editTimer: ReturnType<typeof nodeTimers.setTimeout> | null = null;
+	private hotkeyTimer: ReturnType<typeof nodeTimers.setTimeout> | null = null;
 
 	private clientUnsubs: Unsubscribe[] = [];
 	private server: ServerInfo | null = null;
 	private wasConnected = false;
 	private closing = false;
-	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private reconnectTimer: ReturnType<typeof nodeTimers.setTimeout> | null = null;
 	private quietInFlight = false;
 	private started = false;
 	private disposed = false;
@@ -606,9 +607,9 @@ export class ReadAloudController {
 		if (!session) return;
 		if (this._state.kind === "paused") {
 			// An edit while paused restarts on the resulting `state: playing`.
-			await session.resume().catch((e) => this.log(`resume failed: ${describe(e).message ?? e}`));
+			await session.resume().catch((e) => this.log(`resume failed: ${describe(e).message ?? String(e)}`));
 		} else {
-			await session.pause().catch((e) => this.log(`pause failed: ${describe(e).message ?? e}`));
+			await session.pause().catch((e) => this.log(`pause failed: ${describe(e).message ?? String(e)}`));
 		}
 	}
 
@@ -672,7 +673,7 @@ export class ReadAloudController {
 		if (this.server?.bundleId) ids.add(this.server.bundleId);
 		if (this.opts.defaultServerBundleId) ids.add(this.opts.defaultServerBundleId);
 		for (const id of ids) {
-			await this.opts.tokenStore.delete(id).catch((e) => this.log(`token delete failed: ${describe(e).message ?? e}`));
+			await this.opts.tokenStore.delete(id).catch((e) => this.log(`token delete failed: ${describe(e).message ?? String(e)}`));
 		}
 		this.closing = false;
 		this.setState({ kind: "idle" });
@@ -741,7 +742,7 @@ export class ReadAloudController {
 		this.adoptNote(note, token);
 		this.hotkeyPending = true;
 		this.setState({ kind: "loading" });
-		this.hotkeyTimer = setTimeout(() => {
+		this.hotkeyTimer = nodeTimers.setTimeout(() => {
 			// The read never became a session (too late → `unknownRequest`, cleared by the client).
 			if (token === this.token && this.hotkeyPending && !this.session) {
 				this.endSession();
@@ -942,9 +943,9 @@ export class ReadAloudController {
 			this.pendingRestart = true;
 			return;
 		}
-		if (this.editTimer) clearTimeout(this.editTimer);
+		if (this.editTimer) nodeTimers.clearTimeout(this.editTimer);
 		const token = this.token;
-		this.editTimer = setTimeout(() => {
+		this.editTimer = nodeTimers.setTimeout(() => {
 			this.editTimer = null;
 			if (token === this.token) this.restartFromCurrent();
 		}, this.opts.editDebounceMs ?? 300);
@@ -980,7 +981,7 @@ export class ReadAloudController {
 			const more = !fresh.complete;
 			this.openedWithMore = more;
 			this.sessionText = fresh.text;
-			void this.client.append(this.session, delta, more).catch((e) => this.log(`append failed: ${describe(e).message ?? e}`));
+			void this.client.append(this.session, delta, more).catch((e) => this.log(`append failed: ${describe(e).message ?? String(e)}`));
 			this.repaint();
 			return;
 		}
@@ -1043,9 +1044,9 @@ export class ReadAloudController {
 		this.sessionUnsubs = [];
 		this.noteUnsub?.();
 		this.noteUnsub = null;
-		if (this.editTimer) clearTimeout(this.editTimer);
+		if (this.editTimer) nodeTimers.clearTimeout(this.editTimer);
 		this.editTimer = null;
-		if (this.hotkeyTimer) clearTimeout(this.hotkeyTimer);
+		if (this.hotkeyTimer) nodeTimers.clearTimeout(this.hotkeyTimer);
 		this.hotkeyTimer = null;
 		if (this.surface && this.surface !== opts.keepSurface) {
 			this.surface.clear();
@@ -1079,7 +1080,7 @@ export class ReadAloudController {
 		try {
 			availability = await this.client.availability();
 		} catch (e) {
-			this.log(`availability failed: ${describe(e).message ?? e}`);
+			this.log(`availability failed: ${describe(e).message ?? String(e)}`);
 			return;
 		}
 		const now = this._state.kind;
@@ -1103,7 +1104,7 @@ export class ReadAloudController {
 			if (server) this.server = server;
 			return server !== null;
 		} catch (e) {
-			this.log(`quiet connect failed: ${describe(e).code ?? describe(e).message ?? e}`);
+			this.log(`quiet connect failed: ${describe(e).code ?? describe(e).message ?? String(e)}`);
 			return false;
 		} finally {
 			this.quietInFlight = false;
@@ -1166,7 +1167,7 @@ export class ReadAloudController {
 			void this.refreshAvailability();
 			return;
 		}
-		this.reconnectTimer = setTimeout(() => {
+		this.reconnectTimer = nodeTimers.setTimeout(() => {
 			this.reconnectTimer = null;
 			void this.connectQuietly().then((ok) => {
 				if (!ok && !this.disposed && this.client.state.kind === "disconnected") this.scheduleReconnect(attempt + 1);
@@ -1175,7 +1176,7 @@ export class ReadAloudController {
 	}
 
 	private cancelReconnect(): void {
-		if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+		if (this.reconnectTimer) nodeTimers.clearTimeout(this.reconnectTimer);
 		this.reconnectTimer = null;
 	}
 

@@ -1,3 +1,11 @@
+// The controller deliberately owns Node timers rather than a popout window.
+// Route that clock through Vitest's fake global clock in these unit tests.
+vi.mock("node:timers", () => ({
+    setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms),
+    clearTimeout: (timer: ReturnType<typeof setTimeout>) => clearTimeout(timer),
+    setInterval: (fn: () => void, ms: number) => setInterval(fn, ms),
+    clearInterval: (timer: ReturnType<typeof setInterval>) => clearInterval(timer),
+}));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReadRequestAnswer } from "../../src/connect/index";
 import { remapOffset, sentenceStartBefore } from "../../src/controller";

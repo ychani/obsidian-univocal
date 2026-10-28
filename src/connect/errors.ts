@@ -74,3 +74,10 @@ export class UnivocalError extends Error {
 export function isUnivocalError(e: unknown): e is UnivocalError {
 	return e instanceof UnivocalError;
 }
+
+/** Keep Error identity and metadata, and normalize unusual rejection values. */
+export function asError(value: unknown): Error {
+	if (value instanceof Error) return value;
+	try { return new Error(String(value)); }
+	catch { return new Error("Operation failed with an unreadable error."); }
+}

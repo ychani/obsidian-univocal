@@ -1,3 +1,4 @@
+import * as nodeTimers from "node:timers";
 import { Emitter } from "./emitter";
 import { UnivocalError } from "./errors";
 import type { Logger, ReadingSession, ReadingSessionEvents, SessionState, Unsubscribe } from "./types";
@@ -113,7 +114,7 @@ export class ReadingSessionImpl implements ReadingSession {
 	/** Start delivering events (internal). Flushes the queue one macrotask later. */
 	release(): void {
 		if (!this.held) return;
-		setTimeout(() => this.flush(), 0);
+		nodeTimers.setTimeout(() => this.flush(), 0);
 	}
 
 	private flush(): void {
@@ -122,7 +123,7 @@ export class ReadingSessionImpl implements ReadingSession {
 		const q = this.queue;
 		this.queue = [];
 		for (const [event, payload] of q) {
-			this.emitter.emit(event, payload as never);
+			this.emitter.emit(event, payload);
 			if (event === "ended") this.emitter.clear();
 		}
 	}

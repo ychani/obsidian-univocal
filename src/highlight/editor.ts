@@ -99,8 +99,10 @@ export function paintedRangeCount(state: EditorState): PaintedCount {
 	const v = state.field(univocalHighlightField, false);
 	const out = { word: 0, sentence: 0 };
 	v?.decorations.between(0, state.doc.length, (_from, _to, d) => {
-		if (d.spec.class === WORD_HIGHLIGHT) out.word++;
-		else if (d.spec.class === SENTENCE_HIGHLIGHT) out.sentence++;
+		const spec: unknown = d.spec;
+		const className = spec !== null && typeof spec === "object" && "class" in spec ? spec.class : undefined;
+		if (className === WORD_HIGHLIGHT) out.word++;
+		else if (className === SENTENCE_HIGHLIGHT) out.sentence++;
 	});
 	return out;
 }

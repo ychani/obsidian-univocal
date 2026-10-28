@@ -38,7 +38,7 @@ function commonSuffixLength(a: string, b: string, max: number): number {
 
 const TERMINAL = /[.!?…。！？]/;
 const CLOSER = /["'”’)\]]/;
-const SPACE = /[ \t ]/;
+const SPACE = /[ \t\u00a0]/;
 
 /**
  * Start of the sentence containing `pos`, looking back at most `maxBack`

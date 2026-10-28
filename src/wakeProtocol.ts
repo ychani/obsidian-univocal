@@ -32,7 +32,7 @@ export function wakeProtocolHandler(deps: {
 	log?(message: string): void;
 }): (params: ObsidianProtocolData) => void {
 	return (params) => {
-		const id = parseWake(params as Record<string, string | undefined>);
+		const id = parseWake(params);
 		if (id === null) {
 			deps.log?.("[univocal] ignoring an invalid univocal-connect URL");
 			return;

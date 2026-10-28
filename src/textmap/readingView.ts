@@ -441,15 +441,17 @@ function isFallbackRecord(r: MutationRecord): boolean {
 export function watchRendering(map: ReadingViewTextMap, handlers: RenderWatchHandlers, options: { debounceMs?: number } = {}): RenderWatch {
 	const debounceMs = options.debounceMs ?? 50;
 	const win = map.root.ownerDocument.defaultView;
-	const MO = (win as (Window & { MutationObserver?: typeof MutationObserver }) | null)?.MutationObserver ?? globalThis.MutationObserver;
-	const setT = win ? win.setTimeout.bind(win) : setTimeout;
-	const clearT = win ? win.clearTimeout.bind(win) : clearTimeout;
-	let timer: ReturnType<typeof setTimeout> | number | null = null;
+	// A detached document has no live rendering window to observe.
+	if (!win) return { flush() {}, disconnect() {} };
+	const MO = (win as Window & { MutationObserver: typeof MutationObserver }).MutationObserver;
+	const setT = win.setTimeout.bind(win);
+	const clearT = win.clearTimeout.bind(win);
+	let timer: number | null = null;
 	let live = true;
 	let dirty = false;
 
 	const run = () => {
-		if (timer !== null) clearT(timer as number);
+		if (timer !== null) clearT(timer);
 		timer = null;
 		if (!live || !dirty) return;
 		dirty = false;
@@ -461,7 +463,7 @@ export function watchRendering(map: ReadingViewTextMap, handlers: RenderWatchHan
 	const observer = new MO((records) => {
 		if (!live || records.every(isFallbackRecord)) return;
 		dirty = true;
-		if (timer !== null) clearT(timer as number);
+		if (timer !== null) clearT(timer);
 		timer = setT(run, debounceMs);
 	});
 	observer.observe(map.root, { childList: true, subtree: true, characterData: true });
@@ -476,7 +478,7 @@ export function watchRendering(map: ReadingViewTextMap, handlers: RenderWatchHan
 		disconnect() {
 			live = false;
 			observer.disconnect();
-			if (timer !== null) clearT(timer as number);
+			if (timer !== null) clearT(timer);
 			timer = null;
 		},
 	};

@@ -1,3 +1,5 @@
+import { asError } from "./errors";
+import * as nodeTimers from "node:timers";
 /**
  * Grant-token storage (SPEC §5.3, §9.5).
  *
@@ -26,7 +28,7 @@ export type ExecFileFn = (file: string, args: string[], options: { timeout: numb
 
 const defaultExecFile: ExecFileFn = (file, args, options, callback) =>
 	nodeExecFile(file, args, { timeout: options.timeout, encoding: "utf8", windowsHide: true }, (err, stdout, stderr) =>
-		callback(err as Parameters<ExecFileCallback>[0], String(stdout ?? ""), String(stderr ?? "")),
+		callback(err, String(stdout ?? ""), String(stderr ?? "")),
 	);
 
 export class TokenStoreTimeoutError extends Error {
@@ -39,16 +41,16 @@ export class TokenStoreTimeoutError extends Error {
 /** Race `p` against a timer; the timer never keeps the process alive. */
 export function withTimeout<T>(p: Promise<T>, ms: number, op: string): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
-		const t = setTimeout(() => reject(new TokenStoreTimeoutError(op, ms)), ms);
+		const t = nodeTimers.setTimeout(() => reject(new TokenStoreTimeoutError(op, ms)), ms);
 		(t as { unref?: () => void }).unref?.();
 		p.then(
 			(v) => {
-				clearTimeout(t);
+				nodeTimers.clearTimeout(t);
 				resolve(v);
 			},
 			(e: unknown) => {
-				clearTimeout(t);
-				reject(e);
+				nodeTimers.clearTimeout(t);
+				reject(asError(e));
 			},
 		);
 	});
@@ -101,7 +103,7 @@ export class KeychainTokenStore implements TokenStore {
 		return new Promise((resolve, reject) => {
 			let settled = false;
 			let child: ReturnType<ExecFileFn> | undefined;
-			const timer = setTimeout(() => {
+			const timer = nodeTimers.setTimeout(() => {
 				if (settled) return;
 				settled = true;
 				try {
@@ -116,16 +118,16 @@ export class KeychainTokenStore implements TokenStore {
 				child = this.exec(this.security, args, { timeout: this.timeoutMs }, (err, stdout) => {
 					if (settled) return;
 					settled = true;
-					clearTimeout(timer);
+					nodeTimers.clearTimeout(timer);
 					if (!err) return resolve({ code: 0, stdout });
 					if (err.killed) return reject(new TokenStoreTimeoutError(op, this.timeoutMs));
 					if (typeof err.code === "number") return resolve({ code: err.code, stdout });
-					reject(err);
+					reject(asError(err));
 				});
 			} catch (e) {
 				settled = true;
-				clearTimeout(timer);
-				reject(e);
+				nodeTimers.clearTimeout(timer);
+				reject(asError(e));
 			}
 		});
 	}

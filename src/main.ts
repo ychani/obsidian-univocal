@@ -409,7 +409,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 				return;
 			case "launchUnivocal":
 				// Background launch; the discovery watcher connects once connect.json appears.
-				execFile("open", ["-g", "-b", UNIVOCAL_BUNDLE_ID, "--args", "--connect"], (err) => {
+				execFile("/usr/bin/open", ["-g", "-b", UNIVOCAL_BUNDLE_ID, "--args", "--connect"], (err) => {
 					if (err) new Notice("Couldn't start Univocal.");
 				});
 				return;
@@ -441,7 +441,7 @@ export default class UnivocalReadAloudPlugin extends Plugin {
 				if (this.settings.developer) console.debug(prefix, msg, ...args);
 			},
 			info: (msg, ...args) => {
-				if (this.settings.developer) console.info(prefix, msg, ...args);
+				if (this.settings.developer) console.debug(prefix, msg, ...args);
 			},
 			warn: (msg, ...args) => console.warn(prefix, msg, ...args),
 			error: (msg, ...args) => console.error(prefix, msg, ...args),

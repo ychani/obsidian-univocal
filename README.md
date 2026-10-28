@@ -4,17 +4,17 @@ Read notes aloud with [Univocal](https://univocalapp.com) and highlight each wor
 
 > **Public beta · macOS desktop only.** Requires a Connect-capable build of the [Univocal app](https://univocalapp.com). The plugin is free; continued use of Univocal after its trial requires a paid Univocal licence. No plugin account is required.
 
-This beta is not yet listed in Obsidian Community plugins. Use the manual installation below.
+The plugin is available in [Obsidian Community plugins](https://community.obsidian.md/plugins/univocal-read-aloud).
 
 ## Install
 
-**Manual (now):**
+**Community plugins (recommended):**
 
-1. Download the `univocal-read-aloud-0.1.0.zip` plugin bundle (or the three separate files: `main.js`, `manifest.json` and `styles.css`) from the [0.1.0 beta release](https://github.com/ychani/obsidian-univocal/releases/tag/0.1.0).
-2. Unzip the bundle and copy the three files into `<your vault>/.obsidian/plugins/univocal-read-aloud/`.
-3. In Obsidian, open **Settings → Community plugins**, reload the list and enable **Univocal Read Aloud**.
+1. Open the [Univocal Read Aloud listing](https://community.obsidian.md/plugins/univocal-read-aloud) and choose **Add to Obsidian**.
+2. Install and enable **Univocal Read Aloud** in the vault you want to use.
+3. Connect from Univocal’s **Settings → Connections → Obsidian → Set up**, or run the plugin’s **Read aloud** command and approve the request in Univocal.
 
-**Community plugin directory (pending publication):** once the plugin is listed, search for "Univocal Read Aloud" in **Settings → Community plugins → Browse**.
+**Manual installation:** download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/ychani/obsidian-univocal/releases/latest), copy them into `<your vault>/.obsidian/plugins/univocal-read-aloud/`, reload the Community plugins list, and enable the plugin.
 
 ## Usage
 
@@ -52,7 +52,7 @@ Univocal has its own global hotkey (⌥⇧R by default). With this plugin enable
 
 ## Updating and removing
 
-Until the plugin is listed in Community plugins, update by replacing the three plugin files with files from a newer GitHub release, then reload Obsidian. Your plugin preferences remain in `data.json`. Once listed, use Obsidian’s **Check for updates** control. The plugin never installs or updates itself.
+Use Obsidian’s **Settings → Community plugins → Check for updates** control. For a manual installation, replace the three plugin files with those from a newer GitHub release and reload Obsidian. Preferences remain in `data.json`. The plugin never installs or updates itself.
 
 To disconnect, use **Revoke** beside Obsidian in Univocal. To remove the saved credential too, use the plugin’s **Forget authorization** before uninstalling it through Obsidian’s Community plugins settings.
 
@@ -64,6 +64,7 @@ pnpm dev        # watch build → main.js
 pnpm build      # typecheck + production build
 pnpm typecheck
 pnpm test       # vitest
+pnpm lint       # official Obsidian ESLint rules
 ```
 
 ### Testing in a throwaway vault
@@ -101,6 +102,10 @@ obsidian://univocal-dev?cmd=status[&tag=…]
 - `src/textmap/`, `src/highlight/`: text extraction and offset mapping, and the word and sentence highlighters.
 - `src/controller.ts`: the read-aloud state machine. It's Obsidian-free and tested with fakes in `test/controller/`.
 - `src/main.ts`, `src/settings.ts`, `src/statusBar.ts`, `src/devProtocol.ts`: the plugin shell.
+
+## Review and security
+
+See [SECURITY.md](SECURITY.md) for native capability scope and the remaining generic CSS compatibility notices. See [CONTRIBUTING.md](CONTRIBUTING.md) for verification and release requirements.
 
 ## License
 

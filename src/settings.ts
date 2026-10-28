@@ -1,4 +1,4 @@
-import { type App, PluginSettingTab, Setting } from "obsidian";
+import { type App, Notice, PluginSettingTab, requireApiVersion, Setting, type SettingDefinitionItem } from "obsidian";
 import type { ReaderState } from "./controller";
 
 export type HighlightStyle = "background" | "underline";
@@ -89,7 +89,80 @@ export class UnivocalSettingTab extends PluginSettingTab {
 		super(app, plugin);
 	}
 
-	override display(): void {
+	// Obsidian 1.12 uses this fallback; 1.13+ uses searchable definitions.
+	override display(): void { this.renderLegacy(); }
+
+	private refreshTab(): void {
+		if (requireApiVersion("1.13.0")) this.update();
+		else this.renderLegacy();
+	}
+
+	private showFailure(): void {
+		new Notice("Univocal could not complete that action. Try again.");
+	}
+
+	override getControlValue(key: string): unknown {
+		return Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, key) ? this.host.settings[key as keyof UnivocalSettings] : undefined;
+	}
+
+	override async setControlValue(key: string, value: unknown): Promise<void> {
+		if (!(Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, key))) return;
+		const settingKey = key as keyof UnivocalSettings;
+		if (typeof value !== typeof DEFAULT_SETTINGS[settingKey]) return;
+		Object.assign(this.host.settings, normalizeSettings({ ...this.host.settings, [key]: value }));
+		await this.host.saveSettings();
+		if (key === "rate") this.host.rateChanged();
+		if (key === "highlightStyle") this.host.highlightStyleChanged();
+		if (key === "connectDir") this.host.connectDirChanged();
+		if (key === "developer") this.refreshTab();
+	}
+
+	override getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{ name: "Speaking rate", desc: "Sent to Univocal with each reading; changes apply to the current reading too.",
+			  control: { type: "slider", key: "rate", min: RATE_MIN, max: RATE_MAX, step: 0.05 } },
+			{ name: "Highlight style", desc: "How the spoken word is marked.",
+			  control: { type: "dropdown", key: "highlightStyle", options: { background: "Background", underline: "Underline" } } },
+			{ name: "Answer Univocal’s read hotkey", desc: "Read the focused note with highlighting when you press the read shortcut.",
+			  control: { type: "toggle", key: "hotkeyRouting" } },
+			{ type: "group", heading: "Authorization", items: [
+				{ name: "Status", desc: authorizationSummary(this.host.readerState(), this.host.isConnected()),
+				  render: (setting) => {
+					const update = () => { setting.setDesc(authorizationSummary(this.host.readerState(), this.host.isConnected())); };
+					update();
+					this.unsubscribe?.();
+					const off = this.host.onReaderChange(update);
+					let live = true;
+					const cleanup = () => {
+						if (!live) return;
+						live = false;
+						off();
+						if (this.unsubscribe === cleanup) this.unsubscribe = null;
+					};
+					this.unsubscribe = cleanup;
+					return cleanup;
+				  } },
+				{ name: "Ask again", desc: "Ask Univocal to allow Obsidian. Univocal shows the prompt.",
+				  action: () => { void this.host.askAgain().catch(() => this.showFailure()); } },
+				{ name: "Forget authorization", desc: "Disconnect and remove the saved authorization. The next reading asks again.",
+				  action: () => { void this.host.forgetAuthorization().catch(() => this.showFailure()); } },
+			] },
+			{ name: "Univocal for macOS", desc: "Requires the Univocal app. Note text stays on this Mac.",
+			  render: (setting) => {
+				setting.descEl.appendText(" ");
+				setting.descEl.createEl("a", { text: "Get Univocal", href: UNIVOCAL_URL });
+			  } },
+			{ type: "group", heading: "Developer", items: [
+				{ name: "Developer mode", desc: "Enable development commands and a connection directory override.",
+				  control: { type: "toggle", key: "developer" } },
+				{ name: "Connect directory", desc: "Leave empty to use Univocal’s default connection directory.",
+				  visible: () => this.host.settings.developer,
+				  control: { type: "text", key: "connectDir", placeholder: "~/Library/Application Support/Univocal/Connect" } },
+			] },
+		];
+	}
+
+	private renderLegacy(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 		this.unsubscribe?.();
@@ -99,17 +172,18 @@ export class UnivocalSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Speaking rate")
 			.setDesc("Sent to Univocal with each reading; changes apply to the current reading too.")
-			.addSlider((slider) =>
+			.addSlider((slider) => {
+				slider.sliderEl.title = `${settings.rate}×`;
 				slider
 					.setLimits(RATE_MIN, RATE_MAX, 0.05)
 					.setValue(settings.rate)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						settings.rate = value;
+						slider.sliderEl.title = `${value}×`;
 						await this.host.saveSettings();
 						this.host.rateChanged();
-					}),
-			);
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("Highlight style")
@@ -163,7 +237,6 @@ export class UnivocalSettingTab extends PluginSettingTab {
 			.addButton((b) =>
 				b
 					.setButtonText("Forget")
-					.setWarning()
 					.onClick(async () => {
 						await this.host.forgetAuthorization();
 						renderStatus();
@@ -181,12 +254,12 @@ export class UnivocalSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Developer").setHeading();
 		new Setting(containerEl)
 			.setName("Developer mode")
-			.setDesc("Enables the obsidian://univocal-dev URL handler (read, status, and dev-only stop and pause for QA) and the connect directory override.")
+			.setDesc("Enables developer read, status, pause and stop commands, and the connection directory override.")
 			.addToggle((t) =>
 				t.setValue(settings.developer).onChange(async (value) => {
 					settings.developer = value;
 					await this.host.saveSettings();
-					this.display();
+					this.refreshTab();
 				}),
 			);
 
@@ -201,10 +274,9 @@ export class UnivocalSettingTab extends PluginSettingTab {
 						.onChange((value) => {
 							settings.connectDir = value.trim();
 							if (this.connectDirTimer !== null) window.clearTimeout(this.connectDirTimer);
-							this.connectDirTimer = window.setTimeout(async () => {
+							this.connectDirTimer = window.setTimeout(() => {
 								this.connectDirTimer = null;
-								await this.host.saveSettings();
-								this.host.connectDirChanged();
+								void this.host.saveSettings().then(() => this.host.connectDirChanged()).catch(() => this.showFailure());
 							}, 600);
 						}),
 				);
@@ -217,7 +289,7 @@ export class UnivocalSettingTab extends PluginSettingTab {
 		if (this.connectDirTimer !== null) {
 			window.clearTimeout(this.connectDirTimer);
 			this.connectDirTimer = null;
-			void this.host.saveSettings().then(() => this.host.connectDirChanged());
+			void this.host.saveSettings().then(() => this.host.connectDirChanged()).catch(() => this.showFailure());
 		}
 	}
 }

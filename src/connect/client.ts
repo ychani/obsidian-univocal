@@ -1,3 +1,4 @@
+import * as nodeTimers from "node:timers";
 /**
  * UnivocalClient — Univocal Connect v1 over the Unix socket named in
  * `<connectDir>/connect.json` (SPEC §3–§16).
@@ -9,7 +10,7 @@ import * as net from "node:net";
 import { chunkText, CHUNK_UTF8_BYTES, utf8Length } from "./chunking";
 import { DEFAULT_APP_BUNDLE_ID, PROTOCOL_NAME, PROTOCOL_VERSIONS, readLiveDiscovery, resolveConnectDir, tokenAccount } from "./discovery";
 import { Emitter, noopLogger, unref } from "./emitter";
-import { UnivocalError } from "./errors";
+import { asError, UnivocalError } from "./errors";
 import { DEFAULT_MAX_FRAME_BYTES, encodeFrame, NdjsonDecoder, type WireMessage } from "./ndjson";
 import { ReadingSessionImpl, type SessionHost } from "./session";
 import { DEFAULT_TOKEN_TIMEOUT_MS, withTimeout } from "./tokenStore";
@@ -50,7 +51,7 @@ const SESSION_STATES = new Set<SessionState>(["loading", "playing", "paused"]);
 const ENDED_REASONS = new Set<EndedReason>(["finished", "stopped", "preempted", "error", "revoked"]);
 const DENIED_REASONS = new Set<ConsentDeniedReason>(["user", "timeout", "disabled", "rateLimited", "quiet"]);
 
-type Timer = ReturnType<typeof setTimeout>;
+type Timer = ReturnType<typeof nodeTimers.setTimeout>;
 type HotkeyState = "pending" | "accepted" | "answered";
 
 interface Pending {
@@ -105,7 +106,7 @@ export class UnivocalClient {
 	private reconnectAttempt = 0;
 	private reconnectTimer?: Timer;
 	private watcher?: fs.FSWatcher;
-	private pollTimer?: ReturnType<typeof setInterval>;
+	private pollTimer?: ReturnType<typeof nodeTimers.setInterval>;
 	private watchDebounce?: Timer;
 	private lastSeenPid: number | null = null;
 	/** Pending token writes (tests await these via `whenIdle`). */
@@ -471,9 +472,9 @@ export class UnivocalClient {
 	private armHandshakeTimer(link: Link, ms: number, message: string): void {
 		const hs = link.handshake;
 		if (!hs) return;
-		if (hs.timer) clearTimeout(hs.timer);
+		if (hs.timer) nodeTimers.clearTimeout(hs.timer);
 		hs.timer = unref(
-			setTimeout(() => {
+			nodeTimers.setTimeout(() => {
 				if (link.handshake !== hs) return;
 				link.fatal = new UnivocalError("timeout", message);
 				this.closeLink(link, false);
@@ -589,7 +590,7 @@ export class UnivocalClient {
 		}
 		const hs = link.handshake;
 		link.handshake = undefined;
-		if (hs?.timer) clearTimeout(hs.timer);
+		if (hs?.timer) nodeTimers.clearTimeout(hs.timer);
 		this.autoReconnect = true;
 		this.reconnectAttempt = 0;
 		this.lastSeenPid = link.discovery.pid;
@@ -907,7 +908,7 @@ export class UnivocalClient {
 		try {
 			frame = encodeFrame({ ...message, id }, link.limits.maxFrameBytes);
 		} catch (e) {
-			return Promise.reject(e);
+			return Promise.reject(asError(e));
 		}
 		return new Promise<WireMessage>((resolve, reject) => {
 			link.pending.set(id, { resolve, reject });
@@ -939,7 +940,7 @@ export class UnivocalClient {
 		link.socket.destroy();
 		const hs = link.handshake;
 		link.handshake = undefined;
-		if (hs?.timer) clearTimeout(hs.timer);
+		if (hs?.timer) nodeTimers.clearTimeout(hs.timer);
 		const pending = [...link.pending.values()];
 		link.pending.clear();
 		for (const p of pending) p.reject(err);
@@ -1049,7 +1050,7 @@ export class UnivocalClient {
 		}
 		const gen = this.generation;
 		this.reconnectTimer = unref(
-			setTimeout(() => {
+			nodeTimers.setTimeout(() => {
 				this.reconnectTimer = undefined;
 				if (gen !== this.generation || !this.autoReconnect) return;
 				void this.quietAttempt().then((o) => {
@@ -1060,18 +1061,18 @@ export class UnivocalClient {
 	}
 
 	private clearReconnectTimer(): void {
-		if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+		if (this.reconnectTimer) nodeTimers.clearTimeout(this.reconnectTimer);
 		this.reconnectTimer = undefined;
 	}
 
 	private startWatching(): void {
 		if (this.pollTimer) return;
 		const dir = this.connectDir;
-		this.pollTimer = unref(setInterval(() => this.checkServerAppearance(), this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS));
+		this.pollTimer = unref(nodeTimers.setInterval(() => this.checkServerAppearance(), this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS));
 		try {
 			const w = fs.watch(dir, { persistent: false }, () => {
-				if (this.watchDebounce) clearTimeout(this.watchDebounce);
-				this.watchDebounce = unref(setTimeout(() => this.checkServerAppearance(), 100));
+				if (this.watchDebounce) nodeTimers.clearTimeout(this.watchDebounce);
+				this.watchDebounce = unref(nodeTimers.setTimeout(() => this.checkServerAppearance(), 100));
 			});
 			w.on("error", () => {
 				w.close();
@@ -1084,9 +1085,9 @@ export class UnivocalClient {
 	}
 
 	private stopWatching(): void {
-		if (this.pollTimer) clearInterval(this.pollTimer);
+		if (this.pollTimer) nodeTimers.clearInterval(this.pollTimer);
 		this.pollTimer = undefined;
-		if (this.watchDebounce) clearTimeout(this.watchDebounce);
+		if (this.watchDebounce) nodeTimers.clearTimeout(this.watchDebounce);
 		this.watchDebounce = undefined;
 		this.watcher?.close();
 		this.watcher = undefined;
@@ -1098,7 +1099,7 @@ export class UnivocalClient {
 			// Re-arm the watcher once the dir exists.
 			const poll = this.pollTimer;
 			this.pollTimer = undefined;
-			clearInterval(poll);
+			nodeTimers.clearInterval(poll);
 			this.startWatching();
 		}
 		const d = readLiveDiscovery(this.connectDir);
@@ -1134,7 +1135,7 @@ function connectSocket(path: string): Promise<net.Socket> {
 		const socket = net.connect({ path });
 		const onError = (e: Error) => {
 			socket.destroy();
-			reject(e);
+			reject(asError(e));
 		};
 		socket.once("error", onError);
 		socket.once("connect", () => {
@@ -1145,7 +1146,7 @@ function connectSocket(path: string): Promise<net.Socket> {
 }
 
 function sleep(ms: number): Promise<void> {
-	return new Promise((r) => unref(setTimeout(r, ms)));
+	return new Promise((r) => unref(nodeTimers.setTimeout(r, ms)));
 }
 
 function cancelled(): UnivocalError {
@@ -1181,7 +1182,7 @@ function denialMessage(reason: ConsentDeniedReason): string {
 
 function execFileOk(file: string, args: string[], timeoutMs: number): Promise<string> {
 	return new Promise((resolve, reject) => {
-		execFile(file, args, { timeout: timeoutMs, encoding: "utf8" }, (err, stdout) => (err ? reject(err) : resolve(String(stdout))));
+		execFile(file, args, { timeout: timeoutMs, encoding: "utf8" }, (err, stdout) => (err ? reject(asError(err)) : resolve(String(stdout))));
 	});
 }
 

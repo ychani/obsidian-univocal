@@ -364,3 +364,30 @@ describe("reading-view text map: virtualised rendering", () => {
 		expect(appended).toHaveLength(2);
 	});
 });
+
+describe("render watcher window ownership", () => {
+    it("uses and cancels the root document's own window timer", async () => {
+        const frame = document.createElement("iframe");
+        document.body.appendChild(frame);
+        const doc = frame.contentDocument!;
+        const win = doc.defaultView!;
+        const root = doc.createElement("div");
+        doc.body.appendChild(root);
+        root.textContent = "Before.";
+        const schedule = vi.spyOn(win, "setTimeout");
+        const cancel = vi.spyOn(win, "clearTimeout");
+        const watcher = watchRendering(createReadingViewTextMap(root), {}, { debounceMs: 100 });
+        root.textContent = "After.";
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(schedule).toHaveBeenCalled();
+        watcher.disconnect();
+        expect(cancel).toHaveBeenCalled();
+        schedule.mockRestore(); cancel.mockRestore(); frame.remove();
+    });
+    it("does not borrow a global observer for a detached document", () => {
+        const detached = document.implementation.createHTMLDocument("Detached");
+        detached.body.textContent = "Text.";
+        const watcher = watchRendering(createReadingViewTextMap(detached.body), {});
+        expect(() => { watcher.flush(); watcher.disconnect(); }).not.toThrow();
+    });
+});
